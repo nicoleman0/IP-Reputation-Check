@@ -50,11 +50,21 @@ function generateSummary(data) {
   return `This IP from ${country} has ${reports} abuse report(s) with a ${score}% confidence score.`;
 }
 
+function isValidIP(ip) {
+  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  const ipv6Regex = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
+  return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+}
+
 app.post('/api/ip', async (req, res) => {
   const { ip } = req.body;
 
   if (!ip) {
     return res.status(400).json({ error: 'An IP address is required' });
+  }
+
+  if (!isValidIP(ip)) {
+    return res.status(400).json({ error: 'Invalid IP address format' });
   }
 
   try {
@@ -75,7 +85,17 @@ app.post('/api/ip', async (req, res) => {
     const normalizedData = normalizeAbuseIPData(response.data.data);
     res.json(normalizedData);
   } catch (err) {
-    res.status(500).json({ error: 'API request failed' });
+    console.error('API Error:', err.response?.data || err.message);
+    
+    if (err.response?.status === 429) {
+      return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
+    }
+    
+    if (err.response?.status === 401) {
+      return res.status(401).json({ error: 'Invalid API key' });
+    }
+    
+    res.status(500).json({ error: 'API request failed', details: err.message });
   }
 });
 
