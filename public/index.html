@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>IP Reputation</h2>
+  <input id="ip" placeholder="Enter IP address" />
+  <button onclick="checkIP()">Check</button>
+
+  <pre id="result"></pre>
+
+  <script>
+    async function checkIP() {
+      const ip = document.getElementById('ip').value;
+
+      const res = await fetch('/api/ip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip })
+      });
+
+      const data = await res.json();
+      document.getElementById('result').textContent =
+        JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>
