@@ -1,10 +1,48 @@
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
+const { RateLimiterMemory } = require('rate-limiter-flexible');
 
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
+
+// Rate limiter configuration
+// General API limiter: 10 requests per minute per IP
+const apiLimiter = new RateLimiterMemory({
+  points: 10, // Number of requests
+  duration: 60, // Per 60 seconds (1 minute)
+  blockDuration: 60, // Block for 60 seconds if exceeded
+});
+
+// Strict limiter for external API calls: 5 requests per minute per IP
+// This protects against quota exhaustion from external APIs
+const strictLimiter = new RateLimiterMemory({
+  points: 5, // Number of requests
+  duration: 60, // Per 60 seconds
+  blockDuration: 120, // Block for 2 minutes if exceeded
+});
+
+// Rate limiter middleware factory
+const rateLimiterMiddleware = (limiter) => {
+  return async (req, res, next) => {
+    try {
+      // Use IP address as key for rate limiting
+      const key = req.ip || req.connection.remoteAddress;
+      await limiter.consume(key);
+      next();
+    } catch (rejRes) {
+      // Rate limit exceeded
+      const secs = Math.round(rejRes.msBeforeNext / 1000) || 1;
+      res.set('Retry-After', String(secs));
+      res.status(429).json({
+        error: 'Too many requests',
+        message: `Rate limit exceeded. Please try again in ${secs} seconds.`,
+        retryAfter: secs
+      });
+    }
+  };
+};
 
 function normalizeAbuseIPData(data) {
   return {
@@ -105,7 +143,7 @@ function generateVirusTotalSummary(stats, total) {
   return `Flagged: ${malicious} security vendor(s) flagged this as malicious, ${suspicious} as suspicious (${total} total).`;
 }
 
-app.post('/api/ip', async (req, res) => {
+app.post('/api/ip', rateLimiterMiddleware(strictLimiter), async (req, res) => {
   const { ip } = req.body;
 
   if (!ip) {
@@ -175,7 +213,7 @@ app.post('/api/ip', async (req, res) => {
 });
 
 // New VirusTotal-specific endpoints
-app.post('/api/virustotal/domain', async (req, res) => {
+app.post('/api/virustotal/domain', rateLimiterMiddleware(strictLimiter), async (req, res) => {
   const { domain } = req.body;
 
   if (!domain) {
@@ -216,7 +254,7 @@ app.post('/api/virustotal/domain', async (req, res) => {
   }
 });
 
-app.post('/api/virustotal/url', async (req, res) => {
+app.post('/api/virustotal/url', rateLimiterMiddleware(strictLimiter), async (req, res) => {
   const { url } = req.body;
 
   if (!url) {
@@ -273,7 +311,7 @@ app.post('/api/virustotal/url', async (req, res) => {
   }
 });
 
-app.post('/api/virustotal/hash', async (req, res) => {
+app.post('/api/virustotal/hash', rateLimiterMiddleware(strictLimiter), async (req, res) => {
   const { hash } = req.body;
 
   if (!hash) {
