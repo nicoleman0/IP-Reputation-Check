@@ -1,6 +1,6 @@
 # IP Reputation Check
 
-![License](https://img.shields.io/badge/license-ISC-blue.svg)
+![License](https://img.shields.io/badge/license-MIT.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)
 ![Express](https://img.shields.io/badge/express-5.2.1-lightgrey.svg)
 ![APIs](https://img.shields.io/badge/APIs-AbuseIPDB%20%7C%20VirusTotal-orange.svg)
