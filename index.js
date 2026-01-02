@@ -1,9 +1,40 @@
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
+const helmet = require('helmet');
 const { RateLimiterMemory } = require('rate-limiter-flexible');
 
 const app = express();
+
+// Trust proxy - important for getting real IP addresses behind reverse proxies
+app.set('trust proxy', 1);
+
+// Security: Helmet.js for secure HTTP headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+}));
+
+// Security: HTTPS enforcement in production
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && !req.secure && req.get('x-forwarded-proto') !== 'https') {
+    return res.redirect(301, `https://${req.get('host')}${req.url}`);
+  }
+  next();
+});
+
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -42,6 +73,29 @@ const rateLimiterMiddleware = (limiter) => {
       });
     }
   };
+};
+
+// Security: API configuration validation middleware
+const validateApiKeysConfigured = (req, res, next) => {
+  const missingKeys = [];
+  
+  if (!process.env.ABUSEIPDB_API_KEY) {
+    missingKeys.push('ABUSEIPDB_API_KEY');
+  }
+  if (!process.env.VIRUSTOTAL_API_KEY) {
+    missingKeys.push('VIRUSTOTAL_API_KEY');
+  }
+  
+  if (missingKeys.length > 0) {
+    return res.status(503).json({
+      error: 'Service configuration error',
+      message: 'API service is not properly configured. Please contact the administrator.',
+      // Don't expose which keys are missing in production
+      ...(process.env.NODE_ENV !== 'production' && { missingKeys })
+    });
+  }
+  
+  next();
 };
 
 function normalizeAbuseIPData(data) {
@@ -143,7 +197,7 @@ function generateVirusTotalSummary(stats, total) {
   return `Flagged: ${malicious} security vendor(s) flagged this as malicious, ${suspicious} as suspicious (${total} total).`;
 }
 
-app.post('/api/ip', rateLimiterMiddleware(strictLimiter), async (req, res) => {
+app.post('/api/ip', rateLimiterMiddleware(strictLimiter), validateApiKeysConfigured, async (req, res) => {
   const { ip } = req.body;
 
   if (!ip) {
@@ -213,7 +267,7 @@ app.post('/api/ip', rateLimiterMiddleware(strictLimiter), async (req, res) => {
 });
 
 // New VirusTotal-specific endpoints
-app.post('/api/virustotal/domain', rateLimiterMiddleware(strictLimiter), async (req, res) => {
+app.post('/api/virustotal/domain', rateLimiterMiddleware(strictLimiter), validateApiKeysConfigured, async (req, res) => {
   const { domain } = req.body;
 
   if (!domain) {
@@ -254,7 +308,7 @@ app.post('/api/virustotal/domain', rateLimiterMiddleware(strictLimiter), async (
   }
 });
 
-app.post('/api/virustotal/url', rateLimiterMiddleware(strictLimiter), async (req, res) => {
+app.post('/api/virustotal/url', rateLimiterMiddleware(strictLimiter), validateApiKeysConfigured, async (req, res) => {
   const { url } = req.body;
 
   if (!url) {
@@ -311,7 +365,7 @@ app.post('/api/virustotal/url', rateLimiterMiddleware(strictLimiter), async (req
   }
 });
 
-app.post('/api/virustotal/hash', rateLimiterMiddleware(strictLimiter), async (req, res) => {
+app.post('/api/virustotal/hash', rateLimiterMiddleware(strictLimiter), validateApiKeysConfigured, async (req, res) => {
   const { hash } = req.body;
 
   if (!hash) {
