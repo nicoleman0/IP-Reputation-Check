@@ -1,5 +1,11 @@
 # IP Reputation Check
 
+![License](https://img.shields.io/badge/license-ISC-blue.svg)
+![Node](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)
+![Express](https://img.shields.io/badge/express-5.2.1-lightgrey.svg)
+![APIs](https://img.shields.io/badge/APIs-AbuseIPDB%20%7C%20VirusTotal-orange.svg)
+![Contributions](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)
+
 A web application for checking IP address reputation using the AbuseIPDB and VirusTotal APIs.
 
 ## Description
