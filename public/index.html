@@ -375,90 +375,196 @@
 
     function displayResults(data) {
       const resultDiv = document.getElementById('result');
-      const threatClass = data.threatLevel.toLowerCase().replace(' ', '-');
-      const scoreClass = getScoreClass(data.abuseConfidenceScore);
+      const abuseDB = data.abuseipdb || {};
+      const virusTotal = data.virustotal || {};
 
-      resultDiv.innerHTML = `
-        <div class="result-card">
-          <div class="result-header">
-            <div class="ip-address">${data.ipAddress}</div>
-            <div class="threat-badge threat-${threatClass}">${data.threatLevel}</div>
-          </div>
+      let html = '';
 
-          <div class="result-section">
-            <div class="score-container">
-              <div class="score-circle score-${scoreClass}">
-                ${data.abuseConfidenceScore}%
-              </div>
-              <div class="score-details">
-                <div class="score-title">Abuse Confidence Score</div>
-                <div class="score-value">${data.totalReports} report(s) from ${data.numDistinctUsers} user(s)</div>
-              </div>
+      // AbuseIPDB Section
+      if (abuseDB && !abuseDB.error) {
+        const threatClass = abuseDB.threatLevel.toLowerCase().replace(' ', '-');
+        const scoreClass = getScoreClass(abuseDB.abuseConfidenceScore);
+
+        html += `
+          <div class="result-card">
+            <div class="result-header">
+              <div class="ip-address">${abuseDB.ipAddress}</div>
+              <div class="threat-badge threat-${threatClass}">${abuseDB.threatLevel}</div>
             </div>
-          </div>
 
-          <div class="result-section">
-            <h3>Summary</h3>
-            <div class="summary">${data.summary}</div>
-          </div>
-
-          <div class="result-section">
-            <h3>Network Information</h3>
-            <div class="info-grid">
-              <div class="info-item">
-                <div class="info-label">Country</div>
-                <div class="info-value">${data.countryName} (${data.countryCode})</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">ISP</div>
-                <div class="info-value">${data.isp}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Domain</div>
-                <div class="info-value">${data.domain}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Usage Type</div>
-                <div class="info-value">${data.usageType}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">IP Version</div>
-                <div class="info-value">IPv${data.ipVersion}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Public IP</div>
-                <div class="info-value">${data.isPublic ? 'Yes' : 'No'}</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="result-section">
-            <h3>Additional Details</h3>
-            <div class="info-grid">
-              <div class="info-item">
-                <div class="info-label">Last Reported</div>
-                <div class="info-value">${data.lastReportedAt}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Whitelisted</div>
-                <div class="info-value">${data.isWhitelisted ? 'Yes' : 'No'}</div>
-              </div>
-            </div>
-          </div>
-
-          ${data.hostnames && data.hostnames.length > 0 && data.hostnames[0] !== 'No hostnames available' ? `
             <div class="result-section">
-              <h3>Hostnames</h3>
-              <div class="hostnames-list">
-                <ul>
-                  ${data.hostnames.map(h => `<li>${h}</li>`).join('')}
-                </ul>
+              <h3>AbuseIPDB Report</h3>
+              <div class="score-container">
+                <div class="score-circle score-${scoreClass}">
+                  ${abuseDB.abuseConfidenceScore}%
+                </div>
+                <div class="score-details">
+                  <div class="score-title">Abuse Confidence Score</div>
+                  <div class="score-value">${abuseDB.totalReports} report(s) from ${abuseDB.numDistinctUsers} user(s)</div>
+                </div>
               </div>
             </div>
-          ` : ''}
-        </div>
-      `;
 
+            <div class="result-section">
+              <h3>Summary</h3>
+              <div class="summary">${abuseDB.summary}</div>
+            </div>
+
+            <div class="result-section">
+              <h3>Network Information</h3>
+              <div class="info-grid">
+                <div class="info-item">
+                  <div class="info-label">Country</div>
+                  <div class="info-value">${abuseDB.countryName} (${abuseDB.countryCode})</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">ISP</div>
+                  <div class="info-value">${abuseDB.isp}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Domain</div>
+                  <div class="info-value">${abuseDB.domain}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Usage Type</div>
+                  <div class="info-value">${abuseDB.usageType}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">IP Version</div>
+                  <div class="info-value">IPv${abuseDB.ipVersion}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Public IP</div>
+                  <div class="info-value">${abuseDB.isPublic ? 'Yes' : 'No'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="result-section">
+              <h3>Additional Details</h3>
+              <div class="info-grid">
+                <div class="info-item">
+                  <div class="info-label">Last Reported</div>
+                  <div class="info-value">${abuseDB.lastReportedAt}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Whitelisted</div>
+                  <div class="info-value">${abuseDB.isWhitelisted ? 'Yes' : 'No'}</div>
+                </div>
+              </div>
+            </div>
+
+            ${abuseDB.hostnames && abuseDB.hostnames.length > 0 && abuseDB.hostnames[0] !== 'No hostnames available' ? `
+              <div class="result-section">
+                <h3>Hostnames</h3>
+                <div class="hostnames-list">
+                  <ul>
+                    ${abuseDB.hostnames.map(h => `<li>${h}</li>`).join('')}
+                  </ul>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      } else if (abuseDB.error) {
+        html += `
+          <div class="result-card">
+            <div class="result-section">
+              <h3>AbuseIPDB Report</h3>
+              <div class="summary" style="color: #c33;">${abuseDB.error}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      // VirusTotal Section
+      if (virusTotal && !virusTotal.error) {
+        const vtThreatClass = virusTotal.threatLevel.toLowerCase().replace(' ', '-');
+        const detectionPercent = virusTotal.totalScans > 0 
+          ? Math.round((virusTotal.malicious / virusTotal.totalScans) * 100)
+          : 0;
+
+        html += `
+          <div class="result-card" style="margin-top: 20px;">
+            <div class="result-header">
+              <div class="ip-address">VirusTotal Report</div>
+              <div class="threat-badge threat-${vtThreatClass}">${virusTotal.threatLevel}</div>
+            </div>
+
+            <div class="result-section">
+              <div class="score-container">
+                <div class="score-circle score-${vtThreatClass === 'clean' ? 'minimal' : vtThreatClass.replace(' ', '-')}">
+                  ${detectionPercent}%
+                </div>
+                <div class="score-details">
+                  <div class="score-title">Detection Rate</div>
+                  <div class="score-value">${virusTotal.detectionRate} security vendors</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="result-section">
+              <h3>Summary</h3>
+              <div class="summary">${virusTotal.summary}</div>
+            </div>
+
+            <div class="result-section">
+              <h3>Detection Statistics</h3>
+              <div class="info-grid">
+                <div class="info-item" style="border-left-color: #c33;">
+                  <div class="info-label">Malicious</div>
+                  <div class="info-value">${virusTotal.malicious}</div>
+                </div>
+                <div class="info-item" style="border-left-color: #d63031;">
+                  <div class="info-label">Suspicious</div>
+                  <div class="info-value">${virusTotal.suspicious}</div>
+                </div>
+                <div class="info-item" style="border-left-color: #00b894;">
+                  <div class="info-label">Harmless</div>
+                  <div class="info-value">${virusTotal.harmless}</div>
+                </div>
+                <div class="info-item" style="border-left-color: #b2bec3;">
+                  <div class="info-label">Undetected</div>
+                  <div class="info-value">${virusTotal.undetected}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="result-section">
+              <h3>Additional Information</h3>
+              <div class="info-grid">
+                <div class="info-item">
+                  <div class="info-label">Country</div>
+                  <div class="info-value">${virusTotal.country || 'Unknown'}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">AS Owner</div>
+                  <div class="info-value">${virusTotal.asOwner || 'Unknown'}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Reputation</div>
+                  <div class="info-value">${virusTotal.reputation}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Last Analysis</div>
+                  <div class="info-value">${virusTotal.lastAnalysisDate}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (virusTotal.error) {
+        html += `
+          <div class="result-card" style="margin-top: 20px;">
+            <div class="result-section">
+              <h3>VirusTotal Report</h3>
+              <div class="summary" style="color: #c33;">${virusTotal.error}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      resultDiv.innerHTML = html;
       resultDiv.style.display = 'block';
       showAlert('IP reputation check complete!', 'success');
     }
